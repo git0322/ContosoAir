@@ -1,0 +1,39 @@
+1 pool: 
+2   vmImage: ubuntu-16.04 
+3 trigger: 
+4   - master    ## CI Triggers 를 통해 실행 => Master branch에 업데이트가 trigger로 동작 
+5 steps: 
+6   - task: Npm@1 
+7     inputs: 
+8       command: 'custom' 
+9       customcommand: 'install --production' 
+10   - script: | 
+11       npm install 
+12       npm test 
+13     displayName: 'Run unit tests' 
+14     continueOnError: true 
+15   - task: PublishTestResults@2 
+16     displayName: 'Publish Test Results' 
+17     condition: succeededOrFailed() 
+18     inputs: 
+19       testResultsFiles: $(System.DefaultWorkingDirectory)/test-report.xml 
+20   - task: PublishCodeCoverageResults@1 
+21     displayName: 'Publish Code Coverage' 
+22     condition: 'in(variables[''Agent.JobStatus''], ''Succeeded'')' 
+23     inputs: 
+24       codeCoverageTool: Cobertura 
+25       summaryFileLocation: '$(System.DefaultWorkingDirectory)/coverage/*coverage.xml' 
+26       reportDirectory: $(System.DefaultWorkingDirectory)/coverage 
+27   - task: ArchiveFiles@2 
+28     displayName: 'Archive sources' 
+29     inputs: 
+30       rootFolderOrFile: $(Build.SourcesDirectory) 
+31       includeRootFolder: false 
+32   - task: CopyFiles@2 
+33     displayName: 'Copy ARM templates' 
+34     inputs: 
+35       SourceFolder: deployment 
+36       Contents: '*.json' 
+37       TargetFolder: $(build.artifactstagingdirectory)/Templates 
+38   - task: PublishBuildArtifacts@1 
+39     displayName: 'Publish Artifact: drop' 
